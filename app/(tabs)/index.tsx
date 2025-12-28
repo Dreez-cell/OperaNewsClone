@@ -5,21 +5,22 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
-import { PostCard } from '../../components/reddit/PostCard';
-import { useReddit } from '../../hooks/useReddit';
-import { Post } from '../../types/reddit';
-import { DrawerLayout } from 'react-native-gesture-handler';
+import { PostCard } from '../../components/readit/PostCard';
+import { useReadit } from '../../hooks/useReadit';
+import { Post } from '../../types/readit';
+import { useAuth } from '@/template';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
-  const drawerRef = React.useRef<DrawerLayout>(null);
+  const { user } = useAuth();
   
-  const { posts, loading, refreshing, handleRefresh, handleVote, handleJoin, handleSave } = useReddit();
-  const [selectedSort, setSelectedSort] = useState('Popular near you');
+  const [feedType, setFeedType] = useState<'home' | 'trending' | 'personalized'>('home');
+  const { posts, loading, refreshing, handleRefresh, handleVote, handleJoin, handleSave, handleView } = useReadit(feedType);
 
   const handleArticlePress = (post: Post) => {
+    handleView(post.id);
     router.push({
       pathname: '/post',
       params: { id: post.id, title: post.title },
@@ -28,6 +29,10 @@ export default function HomeScreen() {
 
   const openDrawer = () => {
     router.push('/drawer');
+  };
+
+  const openSettings = () => {
+    router.push('/settings');
   };
 
   const renderHeader = () => (
@@ -50,14 +55,9 @@ export default function HomeScreen() {
             color={isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light}
           />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.logoContainer}>
-          <Text style={styles.logo}>reddit</Text>
-          <Ionicons
-            name="chevron-down"
-            size={20}
-            color={isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light}
-          />
-        </TouchableOpacity>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logo}>readit</Text>
+        </View>
       </View>
       <View style={styles.headerRight}>
         <TouchableOpacity style={styles.iconButton}>
@@ -67,41 +67,114 @@ export default function HomeScreen() {
             color={isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light}
           />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarButton}>
+        <TouchableOpacity style={styles.avatarButton} onPress={openSettings}>
           <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="person" size={20} color="#FFFFFF" />
           </View>
-          <View style={styles.onlineDot} />
+          {user && <View style={styles.onlineDot} />}
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  const renderSort = () => (
-    <TouchableOpacity
+  const renderFeedSelector = () => (
+    <View
       style={[
-        styles.sortBar,
+        styles.feedSelector,
         {
           backgroundColor: isDark
             ? theme.colors.background.card.dark
             : theme.colors.background.card.light,
+          borderBottomColor: isDark ? theme.colors.border.dark : theme.colors.border.light,
         },
       ]}
     >
-      <Text
+      <TouchableOpacity
         style={[
-          styles.sortText,
-          { color: isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light },
+          styles.feedButton,
+          feedType === 'home' && styles.feedButtonActive,
         ]}
+        onPress={() => setFeedType('home')}
       >
-        {selectedSort}
-      </Text>
-      <Ionicons
-        name="ellipsis-horizontal"
-        size={20}
-        color={isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light}
-      />
-    </TouchableOpacity>
+        <Ionicons
+          name="home"
+          size={20}
+          color={feedType === 'home' ? theme.colors.primary : isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light}
+        />
+        <Text
+          style={[
+            styles.feedButtonText,
+            {
+              color: feedType === 'home'
+                ? theme.colors.primary
+                : isDark
+                ? theme.colors.text.secondary.dark
+                : theme.colors.text.secondary.light,
+            },
+          ]}
+        >
+          Home
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.feedButton,
+          feedType === 'trending' && styles.feedButtonActive,
+        ]}
+        onPress={() => setFeedType('trending')}
+      >
+        <Ionicons
+          name="trending-up"
+          size={20}
+          color={feedType === 'trending' ? theme.colors.primary : isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light}
+        />
+        <Text
+          style={[
+            styles.feedButtonText,
+            {
+              color: feedType === 'trending'
+                ? theme.colors.primary
+                : isDark
+                ? theme.colors.text.secondary.dark
+                : theme.colors.text.secondary.light,
+            },
+          ]}
+        >
+          Trending
+        </Text>
+      </TouchableOpacity>
+
+      {user && (
+        <TouchableOpacity
+          style={[
+            styles.feedButton,
+            feedType === 'personalized' && styles.feedButtonActive,
+          ]}
+          onPress={() => setFeedType('personalized')}
+        >
+          <Ionicons
+            name="sparkles"
+            size={20}
+            color={feedType === 'personalized' ? theme.colors.primary : isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light}
+          />
+          <Text
+            style={[
+              styles.feedButtonText,
+              {
+                color: feedType === 'personalized'
+                  ? theme.colors.primary
+                  : isDark
+                  ? theme.colors.text.secondary.dark
+                  : theme.colors.text.secondary.light,
+              },
+            ]}
+          >
+            For You
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
   const renderItem = ({ item }: { item: Post }) => (
@@ -111,6 +184,7 @@ export default function HomeScreen() {
       onUpvote={() => handleVote(item.id, 'up')}
       onDownvote={() => handleVote(item.id, 'down')}
       onJoin={() => handleJoin(item.id)}
+      onSave={() => handleSave(item.id)}
     />
   );
 
@@ -130,7 +204,7 @@ export default function HomeScreen() {
       
       {renderHeader()}
       
-      {loading ? (
+      {loading && posts.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
@@ -139,7 +213,7 @@ export default function HomeScreen() {
           data={posts}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderSort}
+          ListHeaderComponent={renderFeedSelector}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -148,6 +222,23 @@ export default function HomeScreen() {
               tintColor={theme.colors.primary}
               colors={[theme.colors.primary]}
             />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="newspaper-outline"
+                size={80}
+                color={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
+              />
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light },
+                ]}
+              >
+                No posts yet. Be the first to post!
+              </Text>
+            </View>
           }
         />
       )}
@@ -179,7 +270,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
   },
   logo: {
     fontSize: theme.typography.fontSize.xl,
@@ -215,20 +305,42 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
-  sortBar: {
+  feedSelector: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.sm,
+    borderBottomWidth: 1,
+  },
+  feedButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.base,
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
   },
-  sortText: {
-    fontSize: theme.typography.fontSize.base,
+  feedButtonActive: {
+    backgroundColor: 'rgba(255, 69, 0, 0.1)',
+  },
+  feedButtonText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semiBold,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xxl,
+  },
+  emptyText: {
+    fontSize: theme.typography.fontSize.base,
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
   },
 });

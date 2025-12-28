@@ -1,9 +1,18 @@
 export const theme = {
   colors: {
-    // Reddit Brand Colors
-    primary: '#FF4500', // Reddit Orange
-    primaryDark: '#CC3700',
-    primaryLight: '#FF6A33',
+    // Readit brand color (orange-red)
+    primary: '#FF4500',
+    secondary: '#0079D3',
+    
+    // Upvote/Downvote
+    upvote: '#FF4500',
+    downvote: '#7193FF',
+    
+    // Action colors
+    join: '#0079D3',
+    success: '#46D160',
+    error: '#EA0027',
+    warning: '#FFB000',
     
     // Backgrounds
     background: {
@@ -31,7 +40,7 @@ export const theme = {
       },
       tertiary: {
         light: '#A8A8A8',
-        dark: '#6A6A6A',
+        dark: '#474748',
       },
     },
     
@@ -40,69 +49,16 @@ export const theme = {
       light: '#EDEFF1',
       dark: '#343536',
     },
-    
-    // Upvote/Downvote
-    upvote: '#FF4500',
-    downvote: '#7193FF',
-    
-    // Join Button
-    join: '#0079D3',
-    
-    // Status
-    success: '#46D160',
-    warning: '#FFB000',
-    error: '#EA0027',
-    
-    // Overlay
-    overlay: 'rgba(0, 0, 0, 0.5)',
-  },
-  
-  typography: {
-    // Font Families
-    fontFamily: {
-      regular: 'System',
-      medium: 'System',
-      semiBold: 'System',
-      bold: 'System',
-    },
-    
-    // Font Sizes
-    fontSize: {
-      xs: 11,
-      sm: 13,
-      base: 15,
-      lg: 17,
-      xl: 20,
-      xxl: 24,
-      xxxl: 28,
-      headline: 34,
-    },
-    
-    // Line Heights
-    lineHeight: {
-      tight: 1.2,
-      normal: 1.5,
-      relaxed: 1.7,
-    },
-    
-    // Font Weights
-    fontWeight: {
-      regular: '400' as const,
-      medium: '500' as const,
-      semiBold: '600' as const,
-      bold: '700' as const,
-    },
   },
   
   spacing: {
     xs: 4,
     sm: 8,
-    md: 12,
     base: 16,
-    lg: 20,
-    xl: 24,
-    xxl: 32,
-    xxxl: 40,
+    md: 12,
+    lg: 24,
+    xl: 32,
+    xxl: 48,
   },
   
   borderRadius: {
@@ -110,8 +66,30 @@ export const theme = {
     base: 8,
     md: 12,
     lg: 16,
-    xl: 20,
     full: 9999,
+  },
+  
+  typography: {
+    fontSize: {
+      xs: 12,
+      sm: 14,
+      base: 16,
+      lg: 18,
+      xl: 20,
+      xxl: 24,
+      xxxl: 32,
+    },
+    fontWeight: {
+      regular: '400' as const,
+      medium: '500' as const,
+      semiBold: '600' as const,
+      bold: '700' as const,
+    },
+    lineHeight: {
+      tight: 1.2,
+      normal: 1.5,
+      relaxed: 1.7,
+    },
   },
   
   shadows: {
@@ -120,23 +98,14 @@ export const theme = {
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 2,
-      elevation: 1,
+      elevation: 2,
     },
     md: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    lg: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
-      shadowRadius: 8,
+      shadowRadius: 4,
       elevation: 4,
     },
   },
 };
-
-export type Theme = typeof theme;

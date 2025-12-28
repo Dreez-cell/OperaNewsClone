@@ -1,20 +1,173 @@
-import React from 'react';
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, useColorScheme, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/template';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { createPost, uploadImage, uploadVideo, moderateContent } from '../../services/readitService';
 
 export default function CreateScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
+  const { user } = useAuth();
 
-  const createOptions = [
-    { id: 'post', icon: 'document-text-outline', title: 'Create Post', description: 'Share text, images, videos, and links' },
-    { id: 'poll', icon: 'stats-chart-outline', title: 'Create Poll', description: 'Get opinions from the community' },
-    { id: 'image', icon: 'image-outline', title: 'Upload Image', description: 'Share photos with Reddit' },
-    { id: 'video', icon: 'videocam-outline', title: 'Upload Video', description: 'Share video content' },
-  ];
+  const [postType, setPostType] = useState<'text' | 'image' | 'video' | 'link'>('text');
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [mediaFiles, setMediaFiles] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handlePickImages = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 3,
+    });
+
+    if (!result.canceled) {
+      setMediaFiles(result.assets);
+      setPostType('image');
+    }
+  };
+
+  const handlePickVideo = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'video/*',
+      copyToCacheDirectory: true,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const videoSize = result.assets[0].size || 0;
+      if (videoSize > 10 * 1024 * 1024) {
+        Alert.alert('Error', 'Video must be less than 10MB');
+        return;
+      }
+      setMediaFiles([result.assets[0]]);
+      setPostType('video');
+    }
+  };
+
+  const handlePost = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to post');
+      return;
+    }
+
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter a title');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // AI content moderation
+      const moderation = await moderateContent(content, title);
+      if (!moderation.safe) {
+        Alert.alert('Content Flagged', `Your post contains inappropriate content: ${moderation.reason}`);
+        setUploading(false);
+        return;
+      }
+
+      let mediaUrls: string[] = [];
+
+      // Upload media
+      if (postType === 'image' && mediaFiles.length > 0) {
+        for (const file of mediaFiles) {
+          const response = await fetch(file.uri);
+          const blob = await response.blob();
+          const fileName = file.fileName || `image_${Date.now()}.jpg`;
+          
+          const { url, error } = await uploadImage(user.id, blob, fileName);
+          if (error) {
+            Alert.alert('Upload Error', error);
+            setUploading(false);
+            return;
+          }
+          if (url) mediaUrls.push(url);
+        }
+      } else if (postType === 'video' && mediaFiles.length > 0) {
+        const file = mediaFiles[0];
+        const response = await fetch(file.uri);
+        const blob = await response.blob();
+        const fileName = file.name || `video_${Date.now()}.mp4`;
+        
+        const { url, error } = await uploadVideo(user.id, blob, fileName);
+        if (error) {
+          Alert.alert('Upload Error', error);
+          setUploading(false);
+          return;
+        }
+        if (url) mediaUrls.push(url);
+      }
+
+      // Create post
+      const { data, error } = await createPost(
+        user.id,
+        title,
+        content,
+        postType,
+        mediaUrls.length > 0 ? mediaUrls : undefined,
+        linkUrl || undefined
+      );
+
+      if (error) {
+        Alert.alert('Error', error);
+      } else {
+        Alert.alert('Success', 'Post created successfully!');
+        setTitle('');
+        setContent('');
+        setLinkUrl('');
+        setMediaFiles([]);
+        setPostType('text');
+        router.back();
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.container,
+          {
+            backgroundColor: isDark
+              ? theme.colors.background.dark
+              : theme.colors.background.light,
+          },
+        ]}
+        edges={['top']}
+      >
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <View style={styles.loginPrompt}>
+          <Ionicons
+            name="log-in-outline"
+            size={80}
+            color={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
+          />
+          <Text
+            style={[
+              styles.loginText,
+              { color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light },
+            ]}
+          >
+            Please log in to create posts
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -30,67 +183,142 @@ export default function CreateScreen() {
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
       
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: isDark
+              ? theme.colors.background.card.dark
+              : theme.colors.background.card.light,
+            borderBottomColor: isDark ? theme.colors.border.dark : theme.colors.border.light,
+          },
+        ]}
+      >
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={[styles.cancelText, { color: theme.colors.primary }]}>Cancel</Text>
+        </TouchableOpacity>
         <Text
           style={[
             styles.headerTitle,
             { color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light },
           ]}
         >
-          Create
+          Create Post
         </Text>
+        <TouchableOpacity onPress={handlePost} disabled={uploading}>
+          {uploading ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          ) : (
+            <Text style={[styles.postText, { color: theme.colors.primary }]}>Post</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {createOptions.map((option) => (
+        <View style={styles.typeSelector}>
           <TouchableOpacity
-            key={option.id}
             style={[
-              styles.optionCard,
+              styles.typeButton,
+              postType === 'text' && styles.typeButtonActive,
+            ]}
+            onPress={() => setPostType('text')}
+          >
+            <Ionicons name="text" size={20} color={postType === 'text' ? '#FFFFFF' : theme.colors.primary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              postType === 'image' && styles.typeButtonActive,
+            ]}
+            onPress={handlePickImages}
+          >
+            <Ionicons name="image" size={20} color={postType === 'image' ? '#FFFFFF' : theme.colors.primary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              postType === 'video' && styles.typeButtonActive,
+            ]}
+            onPress={handlePickVideo}
+          >
+            <Ionicons name="videocam" size={20} color={postType === 'video' ? '#FFFFFF' : theme.colors.primary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              postType === 'link' && styles.typeButtonActive,
+            ]}
+            onPress={() => setPostType('link')}
+          >
+            <Ionicons name="link" size={20} color={postType === 'link' ? '#FFFFFF' : theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        <TextInput
+          style={[
+            styles.titleInput,
+            {
+              color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light,
+              backgroundColor: isDark ? theme.colors.background.card.dark : theme.colors.background.card.light,
+            },
+          ]}
+          placeholder="Title"
+          placeholderTextColor={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
+          value={title}
+          onChangeText={setTitle}
+          maxLength={300}
+        />
+
+        <TextInput
+          style={[
+            styles.contentInput,
+            {
+              color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light,
+              backgroundColor: isDark ? theme.colors.background.card.dark : theme.colors.background.card.light,
+            },
+          ]}
+          placeholder="What's on your mind? (Use #hashtags)"
+          placeholderTextColor={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
+          value={content}
+          onChangeText={setContent}
+          multiline
+          numberOfLines={10}
+          textAlignVertical="top"
+        />
+
+        {postType === 'link' && (
+          <TextInput
+            style={[
+              styles.linkInput,
               {
-                backgroundColor: isDark
-                  ? theme.colors.background.card.dark
-                  : theme.colors.background.card.light,
+                color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light,
+                backgroundColor: isDark ? theme.colors.background.card.dark : theme.colors.background.card.light,
               },
             ]}
-          >
-            <View
+            placeholder="https://example.com"
+            placeholderTextColor={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
+            value={linkUrl}
+            onChangeText={setLinkUrl}
+            keyboardType="url"
+            autoCapitalize="none"
+          />
+        )}
+
+        {mediaFiles.length > 0 && (
+          <View style={styles.mediaPreview}>
+            <Text
               style={[
-                styles.iconContainer,
-                { backgroundColor: isDark ? theme.colors.background.secondary.dark : theme.colors.background.secondary.light },
+                styles.mediaCount,
+                { color: isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light },
               ]}
             >
-              <Ionicons
-                name={option.icon as any}
-                size={32}
-                color={theme.colors.primary}
-              />
-            </View>
-            <View style={styles.optionText}>
-              <Text
-                style={[
-                  styles.optionTitle,
-                  { color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light },
-                ]}
-              >
-                {option.title}
-              </Text>
-              <Text
-                style={[
-                  styles.optionDescription,
-                  { color: isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light },
-                ]}
-              >
-                {option.description}
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
-            />
-          </TouchableOpacity>
-        ))}
+              {mediaFiles.length} {postType === 'image' ? 'image(s)' : 'video'} selected
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -101,39 +329,80 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: theme.spacing.base,
-    paddingVertical: theme.spacing.md,
-  },
-  headerTitle: {
-    fontSize: theme.typography.fontSize.xxl,
-    fontWeight: theme.typography.fontWeight.bold,
-  },
-  optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.base,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
   },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: theme.borderRadius.md,
+  headerTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semiBold,
+  },
+  cancelText: {
+    fontSize: theme.typography.fontSize.base,
+  },
+  postText: {
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.bold,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    padding: theme.spacing.base,
+  },
+  typeButton: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.base,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
   },
-  optionText: {
-    flex: 1,
+  typeButtonActive: {
+    backgroundColor: theme.colors.primary,
   },
-  optionTitle: {
-    fontSize: theme.typography.fontSize.base,
+  titleInput: {
+    marginHorizontal: theme.spacing.base,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.base,
+    borderRadius: theme.borderRadius.base,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.semiBold,
-    marginBottom: theme.spacing.xs,
   },
-  optionDescription: {
+  contentInput: {
+    marginHorizontal: theme.spacing.base,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.base,
+    borderRadius: theme.borderRadius.base,
+    fontSize: theme.typography.fontSize.base,
+    minHeight: 200,
+  },
+  linkInput: {
+    marginHorizontal: theme.spacing.base,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.base,
+    borderRadius: theme.borderRadius.base,
+    fontSize: theme.typography.fontSize.base,
+  },
+  mediaPreview: {
+    marginHorizontal: theme.spacing.base,
+    padding: theme.spacing.base,
+  },
+  mediaCount: {
     fontSize: theme.typography.fontSize.sm,
+  },
+  loginPrompt: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xxl,
+  },
+  loginText: {
+    fontSize: theme.typography.fontSize.lg,
+    marginTop: theme.spacing.lg,
+    textAlign: 'center',
   },
 });
