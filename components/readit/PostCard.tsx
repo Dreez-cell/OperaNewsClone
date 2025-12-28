@@ -32,16 +32,17 @@ export function PostCard({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { width: screenWidth } = Dimensions.get('window');
   
-  // Video player setup
-  const videoSource = post.post_type === 'video' && post.media_urls?.[0] 
-    ? post.media_urls[0] 
-    : null;
+  // Video player setup - only create if we have a video
+  const hasVideo = post.post_type === 'video' && post.media_urls?.[0];
+  const videoSource = hasVideo ? post.media_urls![0] : undefined;
   
-  const player = useVideoPlayer(videoSource || '', (player) => {
-    player.loop = true;
-    player.muted = true;
-    if (autoplayVideo) {
-      player.play();
+  const player = useVideoPlayer(videoSource, (player) => {
+    if (player && videoSource) {
+      player.loop = true;
+      player.muted = true;
+      if (autoplayVideo) {
+        player.play();
+      }
     }
   });
 
@@ -64,7 +65,7 @@ export function PostCard({
   };
 
   const renderMedia = () => {
-    if (post.post_type === 'video' && videoSource) {
+    if (hasVideo && player) {
       return (
         <VideoView
           style={styles.video}
