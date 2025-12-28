@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
-export default function VideoScreen() {
+export default function AnswersScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -30,39 +30,37 @@ export default function VideoScreen() {
             { color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light },
           ]}
         >
-          Video News
+          Answers
         </Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.emptyContainer}>
-          <Ionicons
-            name="videocam-outline"
-            size={80}
-            color={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
-          />
-          <Text
-            style={[
-              styles.emptyTitle,
-              { color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light },
-            ]}
-          >
-            Video News Coming Soon
-          </Text>
-          <Text
-            style={[
-              styles.emptyDescription,
-              {
-                color: isDark
-                  ? theme.colors.text.secondary.dark
-                  : theme.colors.text.secondary.light,
-              },
-            ]}
-          >
-            Watch the latest news videos, live streams, and exclusive video content from around the world.
-          </Text>
-        </View>
-      </ScrollView>
+      <View style={styles.emptyContainer}>
+        <Ionicons
+          name="git-compare-outline"
+          size={80}
+          color={isDark ? theme.colors.text.tertiary.dark : theme.colors.text.tertiary.light}
+        />
+        <Text
+          style={[
+            styles.emptyTitle,
+            { color: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light },
+          ]}
+        >
+          Answers
+        </Text>
+        <Text
+          style={[
+            styles.emptyDescription,
+            {
+              color: isDark
+                ? theme.colors.text.secondary.dark
+                : theme.colors.text.secondary.light,
+            },
+          ]}
+        >
+          Find answers to your questions from the Reddit community
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
@@ -79,14 +77,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xxl,
     fontWeight: theme.typography.fontWeight.bold,
   },
-  content: {
-    flex: 1,
-  },
   emptyContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.xxl,
-    paddingVertical: theme.spacing.xxxl * 2,
   },
   emptyTitle: {
     fontSize: theme.typography.fontSize.xl,

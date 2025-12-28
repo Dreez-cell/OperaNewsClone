@@ -1,53 +1,60 @@
 export const theme = {
   colors: {
-    // Brand Colors
-    primary: '#FF1B2D',
-    primaryDark: '#D91625',
-    primaryLight: '#FF4757',
+    // Reddit Brand Colors
+    primary: '#FF4500', // Reddit Orange
+    primaryDark: '#CC3700',
+    primaryLight: '#FF6A33',
     
     // Backgrounds
     background: {
-      light: '#FFFFFF',
-      dark: '#000000',
+      light: '#DAE0E6',
+      dark: '#030303',
       card: {
         light: '#FFFFFF',
-        dark: '#1C1C1E',
+        dark: '#1A1A1B',
       },
       secondary: {
-        light: '#F2F2F7',
-        dark: '#2C2C2E',
+        light: '#F6F7F8',
+        dark: '#272729',
       },
     },
     
     // Text
     text: {
       primary: {
-        light: '#000000',
-        dark: '#FFFFFF',
+        light: '#1C1C1C',
+        dark: '#D7DADC',
       },
       secondary: {
-        light: '#6E6E73',
-        dark: '#98989D',
+        light: '#7C7C7C',
+        dark: '#818384',
       },
       tertiary: {
-        light: '#8E8E93',
-        dark: '#6E6E73',
+        light: '#A8A8A8',
+        dark: '#6A6A6A',
       },
     },
     
     // Borders
     border: {
-      light: '#E5E5EA',
-      dark: '#38383A',
+      light: '#EDEFF1',
+      dark: '#343536',
     },
     
+    // Upvote/Downvote
+    upvote: '#FF4500',
+    downvote: '#7193FF',
+    
+    // Join Button
+    join: '#0079D3',
+    
     // Status
-    success: '#34C759',
-    warning: '#FF9500',
-    error: '#FF3B30',
+    success: '#46D160',
+    warning: '#FFB000',
+    error: '#EA0027',
     
     // Overlay
-    overlay: 'rgba(0, 0, 0, 0.4)',
+    overlay: 'rgba(0, 0, 0, 0.5)',
   },
   
   typography: {

@@ -13,14 +13,14 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light,
         tabBarInactiveTintColor: isDark
           ? theme.colors.text.secondary.dark
           : theme.colors.text.secondary.light,
         tabBarStyle: {
           backgroundColor: isDark
-            ? theme.colors.background.dark
-            : theme.colors.background.light,
+            ? theme.colors.background.card.dark
+            : theme.colors.background.card.light,
           borderTopColor: isDark ? theme.colors.border.dark : theme.colors.border.light,
           height: Platform.select({
             ios: insets.bottom + 60,
@@ -39,6 +39,7 @@ export default function TabLayout() {
           fontSize: theme.typography.fontSize.xs,
           fontWeight: theme.typography.fontWeight.medium,
         },
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
@@ -49,24 +50,32 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="video"
+        name="answers"
         options={{
-          title: 'Video',
-          tabBarIcon: ({ color, size }) => <Ionicons name="play-circle" size={size} color={color} />,
+          title: 'Answers',
+          tabBarIcon: ({ color, size }) => <Ionicons name="git-compare" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="saved"
+        name="create"
         options={{
-          title: 'Saved',
-          tabBarIcon: ({ color, size }) => <Ionicons name="bookmark" size={size} color={color} />,
+          title: 'Create',
+          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="chat"
         options={{
-          title: 'Me',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
+          title: 'Chat',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="inbox"
+        options={{
+          title: 'Inbox',
+          tabBarIcon: ({ color, size }) => <Ionicons name="notifications" size={size} color={color} />,
+          tabBarBadge: 1,
         }}
       />
     </Tabs>

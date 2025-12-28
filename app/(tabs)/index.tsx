@@ -1,45 +1,116 @@
 import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, useColorScheme, RefreshControl, ActivityIndicator } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, FlatList, StyleSheet, useColorScheme, RefreshControl, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
-import { NewsCard } from '../../components/news/NewsCard';
-import { CategoryTabs } from '../../components/news/CategoryTabs';
-import { EmptyState } from '../../components/news/EmptyState';
-import { useNews } from '../../hooks/useNews';
-import { newsCategories } from '../../services/newsService';
-import { NewsArticle } from '../../types/news';
+import { PostCard } from '../../components/reddit/PostCard';
+import { useReddit } from '../../hooks/useReddit';
+import { Post } from '../../types/reddit';
+import { DrawerLayout } from 'react-native-gesture-handler';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const drawerRef = React.useRef<DrawerLayout>(null);
   
-  const [activeCategory, setActiveCategory] = useState('all');
-  const { articles, loading, refreshing, handleRefresh, handleToggleSave } = useNews(activeCategory);
+  const { posts, loading, refreshing, handleRefresh, handleVote, handleJoin, handleSave } = useReddit();
+  const [selectedSort, setSelectedSort] = useState('Popular near you');
 
-  const handleArticlePress = (article: NewsArticle) => {
+  const handleArticlePress = (post: Post) => {
     router.push({
-      pathname: '/article',
-      params: { id: article.id, title: article.title },
+      pathname: '/post',
+      params: { id: post.id, title: post.title },
     });
   };
 
+  const openDrawer = () => {
+    router.push('/drawer');
+  };
+
   const renderHeader = () => (
-    <CategoryTabs
-      categories={newsCategories}
-      activeCategory={activeCategory}
-      onCategoryChange={setActiveCategory}
-    />
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: isDark
+            ? theme.colors.background.card.dark
+            : theme.colors.background.card.light,
+          borderBottomColor: isDark ? theme.colors.border.dark : theme.colors.border.light,
+        },
+      ]}
+    >
+      <View style={styles.headerLeft}>
+        <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
+          <Ionicons
+            name="menu"
+            size={28}
+            color={isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.logoContainer}>
+          <Text style={styles.logo}>reddit</Text>
+          <Ionicons
+            name="chevron-down"
+            size={20}
+            color={isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light}
+          />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.headerRight}>
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons
+            name="search-outline"
+            size={24}
+            color={isDark ? theme.colors.text.primary.dark : theme.colors.text.primary.light}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.avatarButton}>
+          <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
+            <Ionicons name="person" size={20} color="#FFFFFF" />
+          </View>
+          <View style={styles.onlineDot} />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
-  const renderItem = ({ item }: { item: NewsArticle }) => (
-    <NewsCard
-      article={item}
+  const renderSort = () => (
+    <TouchableOpacity
+      style={[
+        styles.sortBar,
+        {
+          backgroundColor: isDark
+            ? theme.colors.background.card.dark
+            : theme.colors.background.card.light,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.sortText,
+          { color: isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light },
+        ]}
+      >
+        {selectedSort}
+      </Text>
+      <Ionicons
+        name="ellipsis-horizontal"
+        size={20}
+        color={isDark ? theme.colors.text.secondary.dark : theme.colors.text.secondary.light}
+      />
+    </TouchableOpacity>
+  );
+
+  const renderItem = ({ item }: { item: Post }) => (
+    <PostCard
+      post={item}
       onPress={() => handleArticlePress(item)}
-      onSave={() => handleToggleSave(item.id)}
+      onUpvote={() => handleVote(item.id, 'up')}
+      onDownvote={() => handleVote(item.id, 'down')}
+      onJoin={() => handleJoin(item.id)}
     />
   );
 
@@ -57,17 +128,18 @@ export default function HomeScreen() {
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
       
+      {renderHeader()}
+      
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : (
         <FlatList
-          data={articles}
+          data={posts}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          stickyHeaderIndices={[0]}
+          ListHeaderComponent={renderSort}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -75,13 +147,6 @@ export default function HomeScreen() {
               onRefresh={handleRefresh}
               tintColor={theme.colors.primary}
               colors={[theme.colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            <EmptyState
-              icon="newspaper-outline"
-              title="No News Available"
-              description="There are no articles in this category yet. Check back later!"
             />
           }
         />
@@ -93,6 +158,73 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    flex: 1,
+  },
+  menuButton: {
+    padding: theme.spacing.xs,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  logo: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+  },
+  iconButton: {
+    padding: theme.spacing.xs,
+  },
+  avatarButton: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.success,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  sortBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  sortText: {
+    fontSize: theme.typography.fontSize.base,
   },
   loadingContainer: {
     flex: 1,
