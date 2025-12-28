@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nahasonz.onspaceapp"
+      "bundleIdentifier": "com.nahasonz.onspaceapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -47,6 +50,12 @@
         "projectId": "a343ddfc-7ef0-4bbb-b32b-0a5de72ef8bd"
       }
     },
-    "owner": "nahasonz"
+    "owner": "nahasonz",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a343ddfc-7ef0-4bbb-b32b-0a5de72ef8bd"
+    }
   }
 }
